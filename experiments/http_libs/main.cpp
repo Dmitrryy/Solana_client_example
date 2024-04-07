@@ -329,8 +329,62 @@ void cpp_httplib(size_t N) {
 void cpr_test(size_t N) {
   std::cout << "-----------------------------=cpr bench "
                "start=-----------------------------\n";
+  std::vector<int64_t> request_latency_times(N);
+  std::vector<int64_t> balances(N);
 
+  const cpr::Url cpr_url{ENDPOINT};
+  const cpr::Header cpr_header{{"Content-Type", "application/json"}};
 
+  cpr::Session session;
+  session.SetUrl(cpr_url);
+  session.SetHeader(cpr_header);
+
+  for (size_t i = 0; i < N; ++i) {
+
+    // Prepare JSON data
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType &allocator = document.GetAllocator();
+
+    document.AddMember("id", "1", allocator);
+    document.AddMember("jsonrpc", "2.0", allocator);
+    document.AddMember("method", "getBalance", allocator);
+    document.AddMember("params", rapidjson::Value(rapidjson::kArrayType),
+                       allocator);
+    document["params"].PushBack("CsobwrE9x7qfKC23GFWPq8FMVWzVCErWh1A7C2dMBNMM",
+                                allocator);
+
+    rapidjson::StringBuffer sb;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+    document.Accept(writer);
+
+    // SEND
+    auto requestStartTime = std::chrono::high_resolution_clock::now();
+    cpr::Body cpr_body{sb.GetString(), sb.GetSize()};
+    session.SetBody(std::move(cpr_body));
+    auto &&r = session.Post();
+    auto requestEndTime = std::chrono::high_resolution_clock::now();
+
+    std::cout << "HEADER:=---------\n";
+    for (auto &&p: r.header) {
+        std::cout << p.first << ": " << p.second << std::endl;
+    }
+
+    using TimerResolution = std::chrono::nanoseconds;
+    const auto request_latency_time =
+        std::chrono::duration_cast<TimerResolution>(requestEndTime -
+                                                    requestStartTime)
+            .count();
+    request_latency_times[i] = request_latency_time;
+  }
+
+  // calculate means
+  std::cout << "Request Latency: "
+            << std::accumulate(request_latency_times.begin(),
+                               request_latency_times.end(), 0LL) /
+                   N
+            << " ns\n";
+  std::cout << "Balance: " << balances.back() << std::endl;
 }
 
 void chosen_realization(size_t N) {
@@ -363,6 +417,7 @@ void chosen_realization(size_t N) {
 int main() {
   volatile size_t N = 10;
 
+  cpr_test(N);
   chosen_realization(N);
   //   cpp_httplib(N);
   libcurl_test(N);
