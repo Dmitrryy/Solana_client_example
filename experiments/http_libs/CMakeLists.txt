@@ -21,21 +21,29 @@ CPMAddPackage(NAME rapidjson
     "RAPIDJSON_BUILD_THIRDPARTY_GTESTS OFF"
 )
 
-CPMAddPackage(NAME curl_lib
-    GIT_REPOSITORY "https://github.com/curl/curl"
-    GIT_TAG dc178faee97360d99fff18beb89c21506a11014e
-    OPTIONS
-    "CMAKE_USE_LIBSSH2 OFF"
-    "BUILD_CURL_EXE OFF"
-    "BUILD_SHARED_LIBS OFF"
-    "HTTP_ONLY ON"
-    "BUILD_TESTING OFF"
-)
+# CPMAddPackage(NAME curl_lib
+#     GIT_REPOSITORY "https://github.com/curl/curl"
+#     GIT_TAG dc178faee97360d99fff18beb89c21506a11014e
+#     OPTIONS
+#     "CMAKE_USE_LIBSSH2 OFF"
+#     "BUILD_CURL_EXE OFF"
+#     "BUILD_SHARED_LIBS OFF"
+#     "HTTP_ONLY ON"
+#     "BUILD_TESTING OFF"
+# )
 
 CPMAddPackage(NAME cpp_httplib
     GIT_REPOSITORY "https://github.com/yhirose/cpp-httplib"
     GIT_TAG b8bafbc29129a9f12e58032e608b51996219d6f5
     DOWNLOAD_ONLY TRUE
+)
+
+CPMAddPackage(NAME libcpr_p
+    GIT_REPOSITORY "https://github.com/libcpr/cpr"
+    GIT_TAG 11e595428cb824bf24b9d70b286a69e9568b92da
+    OPTIONS
+    "BUILD_SHARED_LIBS OFF"
+    # DOWNLOAD_ONLY TRUE
 )
 
 find_package(cpprestsdk REQUIRED)
@@ -44,9 +52,10 @@ add_executable(http_test
     main.cpp
 )
 
-target_link_libraries(http_test PUBLIC cpprestsdk::cpprest crypto ssl)
+target_link_libraries(http_test PUBLIC cpprestsdk::cpprest crypto ssl cpr::cpr)
 target_link_libraries(http_test PUBLIC libcurl)
 
 target_include_directories(http_test PUBLIC ${cpp_httplib_SOURCE_DIR})
 target_include_directories(http_test PUBLIC ${rapidjson_SOURCE_DIR}/include)
 target_include_directories(http_test PUBLIC ${curl_lib_SOURCE_DIR}/include)
+target_include_directories(http_test PUBLIC ${libcpr_p_SOURCE_DIR}/include)

@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <SolanaAPI.hpp>
+
 #include <cpprest/http_client.h>
 #include <cpprest/json.h>
 
@@ -11,7 +13,8 @@ using namespace web::http;
 using namespace web::http::client;
 using namespace web::json;
 
-constexpr auto ENDPOINT = "http://127.0.0.1:8899";
+constexpr auto ENDPOINT = "https://api.devnet.solana.com/";
+// constexpr auto ENDPOINT = "https://api.testnet.solana.com/";
 constexpr auto PUBKEY = "CsobwrE9x7qfKC23GFWPq8FMVWzVCErWh1A7C2dMBNMM";
 
 void cpprest_bench(size_t N) {
@@ -21,6 +24,7 @@ void cpprest_bench(size_t N) {
   std::vector<int64_t> request_create_times(N);
   std::vector<int64_t> request_latency_times(N);
   std::vector<int64_t> js_extr_times(N);
+  std::vector<int64_t> balances(N);
 
   http_client client(ENDPOINT);
 
@@ -48,8 +52,13 @@ void cpprest_bench(size_t N) {
         .then([&](http_response response) {
           RequestReadyTime = std::chrono::high_resolution_clock::now();
           auto &&responseBody = response.extract_json().get();
-          responseBody.has_field(U("result"));
-          auto balance = responseBody[U("result")][U("value")].as_number();
+          if (responseBody.has_field(U("result")) &&
+              responseBody["result"].has_field("value")) {
+            balances[i] =
+                responseBody[U("result")][U("value")].as_number().is_uint64();
+          } else {
+            std::cerr << "Incomplete response: " << responseBody << std::endl;
+          }
         })
         .wait();
     auto BalanceReadyTime = std::chrono::high_resolution_clock::now();
@@ -167,8 +176,12 @@ void libcurl_test(size_t N) {
       if ((CURLE_OK == res) && ct) {
         if (document.ParseInsitu(httpData->data()).HasParseError())
           throw std::runtime_error("Parsing error");
-        auto balance = document[U("result")][U("value")].GetUint64();
-        balances[i] = balance;
+        if (document.HasMember("result") &&
+            document["result"].HasMember("value")) {
+          balances[i] = document[U("result")][U("value")].GetUint64();
+        } else {
+          std::cerr << "Incomplete response: " << *httpData << std::endl;
+        }
       }
     }
     auto BalanceReadyTime = std::chrono::high_resolution_clock::now();
@@ -228,7 +241,7 @@ void cpp_httplib(size_t N) {
   httplib::Client cli(ENDPOINT);
 
   const std::string data_type = "application/json";
-  const std::string path = "/api/data";
+  const std::string path = "";
   const httplib::Headers headers = {{"Content-Type", "application/json"}};
 
   for (size_t i = 0; i < N; ++i) {
@@ -251,13 +264,11 @@ void cpp_httplib(size_t N) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
     document.Accept(writer);
 
-    // Set headers for JSON content
-
     // Send the POST request with JSON payload
 
     auto RequestStartTime = std::chrono::high_resolution_clock::now();
     const std::string req_body(sb.GetString());
-    auto res = cli.Post(path, req_body, data_type);
+    auto res = cli.Post(path, headers, req_body, data_type);
     auto RequestReadyTime = std::chrono::high_resolution_clock::now();
 
     // Check the response
@@ -265,10 +276,14 @@ void cpp_httplib(size_t N) {
       // Parse the JSON response
       if (document.ParseInsitu(res->body.data()).HasParseError())
         throw std::runtime_error("Parsing error");
-      auto balance = document[U("result")][U("value")].GetUint64();
-      balances[i] = balance;
+      if (document.HasMember("result") &&
+          document["result"].HasMember("value")) {
+        balances[i] = document[U("result")][U("value")].GetUint64();
+      } else {
+        std::cerr << "Incomplete response: " << res->body << std::endl;
+      }
     } else {
-      throw std::runtime_error("Request failed");
+      throw std::runtime_error("Request failed: ");
     }
     auto BalanceReadyTime = std::chrono::high_resolution_clock::now();
 
@@ -309,12 +324,47 @@ void cpp_httplib(size_t N) {
   std::cout << "Balance: " << balances.back() << std::endl;
 }
 
-int main() {
-  // disable unroll optimizations
-  volatile size_t N = 100000;
-  //   volatile size_t N = 1;
+#include <cpr/cpr.h>
 
-  cpp_httplib(N);
+void cpr_test(size_t N) {
+  std::cout << "-----------------------------=cpr bench "
+               "start=-----------------------------\n";
+
+
+}
+
+void chosen_realization(size_t N) {
+  std::cout << "-----------------------------=release bench "
+               "start=-----------------------------\n";
+  SolanaRPCClient cl(ENDPOINT);
+  std::vector<int64_t> balances(N);
+  std::vector<int64_t> request_latency_times(N);
+
+  for (size_t i = 0; i < N; ++i) {
+    auto requestStartTime = std::chrono::high_resolution_clock::now();
+    balances[i] = cl.getBalance(PUBKEY);
+    auto requestEndTime = std::chrono::high_resolution_clock::now();
+
+    using TimerResolution = std::chrono::nanoseconds;
+    const auto request_latency_time =
+        std::chrono::duration_cast<TimerResolution>(requestEndTime -
+                                                    requestStartTime)
+            .count();
+    request_latency_times[i] = request_latency_time;
+  }
+  std::cout << "Request Latency: "
+            << std::accumulate(request_latency_times.begin(),
+                               request_latency_times.end(), 0LL) /
+                   N
+            << " ns\n";
+  std::cout << "Balance: " << balances.back() << std::endl;
+}
+
+int main() {
+  volatile size_t N = 10;
+
+  chosen_realization(N);
+  //   cpp_httplib(N);
   libcurl_test(N);
   cpprest_bench(N);
 }

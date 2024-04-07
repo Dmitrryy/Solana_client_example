@@ -15,21 +15,20 @@ CPMAddPackage(NAME rapidjson
     "RAPIDJSON_BUILD_THIRDPARTY_GTESTS OFF"
 )
 
-CPMAddPackage(NAME curl_lib
-    GIT_REPOSITORY "https://github.com/curl/curl"
-    GIT_TAG dc178faee97360d99fff18beb89c21506a11014e
-    OPTIONS
-    "CMAKE_USE_LIBSSH2 OFF"
-    "BUILD_CURL_EXE OFF"
-    "BUILD_SHARED_LIBS OFF"
-    "HTTP_ONLY ON"
-    "BUILD_TESTING OFF"
-    # DOWNLOAD_ONLY TRUE
-)
+# CPMAddPackage(NAME curl_lib
+#     GIT_REPOSITORY "https://github.com/curl/curl"
+#     GIT_TAG dc178faee97360d99fff18beb89c21506a11014e
+#     OPTIONS
+#     "CMAKE_USE_LIBSSH2 OFF"
+#     "BUILD_CURL_EXE OFF"
+#     "BUILD_SHARED_LIBS OFF"
+#     "HTTP_ONLY ON"
+#     "BUILD_TESTING OFF"
+#     # DOWNLOAD_ONLY TRUE
+# )
 
 add_executable(task1 
     task1.cpp
-    ../src/SolanaAPI.cpp
 )
 
 target_link_libraries(task1 PUBLIC libcurl crypto ssl)
