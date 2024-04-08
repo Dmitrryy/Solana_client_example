@@ -7,6 +7,25 @@ include(cmake/CPM.cmake)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# common dependecies
+#=---------------------------------------------------------
+CPMAddPackage(NAME rapidjson
+    GIT_REPOSITORY "https://github.com/Tencent/rapidjson"
+    GIT_TAG v1.1.0
+    OPTIONS
+    "RAPIDJSON_BUILD_DOC OFF"
+    "RAPIDJSON_BUILD_EXAMPLES OFF"
+    "RAPIDJSON_BUILD_TESTS OFF"
+    "RAPIDJSON_BUILD_THIRDPARTY_GTESTS OFF"
+)
+CPMAddPackage(NAME libcpr_p
+    GIT_REPOSITORY "https://github.com/libcpr/cpr"
+    GIT_TAG 11e595428cb824bf24b9d70b286a69e9568b92da
+    OPTIONS
+    "BUILD_SHARED_LIBS OFF"
+)
+
+
 option(BUILD_EXPERIMENTS "Build binaries with experiments (require additional dependdencies)" OFF)
 # if (BUILD_EXPERIMENTS)
     add_subdirectory(experiments)

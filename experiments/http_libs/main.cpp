@@ -1,3 +1,4 @@
+#include "cpr/status_codes.h"
 #include <chrono>
 #include <numeric>
 #include <stdexcept>
@@ -340,7 +341,6 @@ void cpr_test(size_t N) {
   session.SetHeader(cpr_header);
 
   for (size_t i = 0; i < N; ++i) {
-
     // Prepare JSON data
     rapidjson::Document document;
     document.SetObject();
@@ -358,17 +358,21 @@ void cpr_test(size_t N) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
     document.Accept(writer);
 
+    // std::cout << "Request: " << sb.GetString() << std::endl;
+
+
     // SEND
     auto requestStartTime = std::chrono::high_resolution_clock::now();
     cpr::Body cpr_body{sb.GetString(), sb.GetSize()};
     session.SetBody(std::move(cpr_body));
     auto &&r = session.Post();
     auto requestEndTime = std::chrono::high_resolution_clock::now();
+    // std::cout << "Response: " << r.text << std::endl;
 
-    std::cout << "HEADER:=---------\n";
-    for (auto &&p: r.header) {
-        std::cout << p.first << ": " << p.second << std::endl;
-    }
+    // std::cout << "HEADER:=---------\n";
+    // for (auto &&p : r.header) {
+    //   std::cout << p.first << ": " << p.second << std::endl;
+    // }
 
     using TimerResolution = std::chrono::nanoseconds;
     const auto request_latency_time =
@@ -396,8 +400,23 @@ void chosen_realization(size_t N) {
 
   for (size_t i = 0; i < N; ++i) {
     auto requestStartTime = std::chrono::high_resolution_clock::now();
-    balances[i] = cl.getBalance(PUBKEY);
+    auto &&r = cl.getBalance(PUBKEY);
     auto requestEndTime = std::chrono::high_resolution_clock::now();
+
+    if (cpr::status::is_success(r.status_code)) {
+      char *ct;
+      rapidjson::Document document;
+      if (document.ParseInsitu(r.text.data()).HasParseError())
+        throw std::runtime_error("Parsing error");
+      if (document.HasMember("result") &&
+          document["result"].HasMember("value")) {
+        balances[i] = document[U("result")][U("value")].GetUint64();
+      } else {
+        std::cerr << "Incomplete response: " << r.text << std::endl;
+      }
+    } else {
+      std::cerr << "Error: " << r.status_code << std::endl;
+    }
 
     using TimerResolution = std::chrono::nanoseconds;
     const auto request_latency_time =
