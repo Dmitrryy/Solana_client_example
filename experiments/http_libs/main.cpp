@@ -367,7 +367,7 @@ void cpr_test(size_t N) {
     session.SetBody(std::move(cpr_body));
     auto &&r = session.Post();
     auto requestEndTime = std::chrono::high_resolution_clock::now();
-    // std::cout << "Response: " << r.text << std::endl;
+    std::cout << "Response: " << r.text << std::endl;
 
     // std::cout << "HEADER:=---------\n";
     // for (auto &&p : r.header) {
@@ -436,9 +436,9 @@ void chosen_realization(size_t N) {
 int main() {
   volatile size_t N = 10;
 
-  cpr_test(N);
-  chosen_realization(N);
   //   cpp_httplib(N);
+  chosen_realization(N);
+  cpr_test(N);
   libcurl_test(N);
   cpprest_bench(N);
 }

@@ -24,6 +24,12 @@ CPMAddPackage(NAME libcpr_p
     OPTIONS
     "BUILD_SHARED_LIBS OFF"
 )
+# CPMAddPackage(NAME one_tbb
+#     GIT_REPOSITORY "https://github.com/oneapi-src/oneTBB"
+#     GIT_TAG 54a22a627c942311bc5b4bdf58803af397ded2f5
+#     OPTIONS
+#     "TBB_TEST OFF"
+# )
 
 
 option(BUILD_EXPERIMENTS "Build binaries with experiments (require additional dependdencies)" OFF)
@@ -34,5 +40,4 @@ option(BUILD_EXPERIMENTS "Build binaries with experiments (require additional de
 
 # tasks
 add_subdirectory(task1)
-# add_subdirectory(task2)
-# add_subdirectory(task3)
+add_subdirectory(task2_3)
