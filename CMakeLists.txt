@@ -33,9 +33,9 @@ CPMAddPackage(NAME libcpr_p
 
 
 option(BUILD_EXPERIMENTS "Build binaries with experiments (require additional dependdencies)" OFF)
-# if (BUILD_EXPERIMENTS)
+if (BUILD_EXPERIMENTS)
     add_subdirectory(experiments)
-# endif()
+endif()
 
 
 # tasks

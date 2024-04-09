@@ -369,10 +369,10 @@ void cpr_test(size_t N) {
     auto requestEndTime = std::chrono::high_resolution_clock::now();
     std::cout << "Response: " << r.text << std::endl;
 
-    // std::cout << "HEADER:=---------\n";
-    // for (auto &&p : r.header) {
-    //   std::cout << p.first << ": " << p.second << std::endl;
-    // }
+    std::cout << "HEADER:=---------\n";
+    for (auto &&p : r.header) {
+      std::cout << p.first << ": " << p.second << std::endl;
+    }
 
     using TimerResolution = std::chrono::nanoseconds;
     const auto request_latency_time =

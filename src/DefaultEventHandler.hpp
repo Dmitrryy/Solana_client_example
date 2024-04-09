@@ -2,6 +2,7 @@
 
 #include "Container.hpp"
 #include "IEventHandler.hpp"
+#include "ErrorHandler.hpp"
 #include "SolanaAPI.hpp"
 
 #include "rapidjson/document.h"
@@ -30,26 +31,33 @@ public:
       break;
     case EventTy::ERROR:
       // TODO: logging library
-      std::cerr << "Error: " << std::endl;
+      std::cerr << "Event:error\n";
       break;
     case EventTy::INVOKE:
       invoke();
       break;
     default:
       // TODO: fatal error(incorrect program) or logging library
-      std::cerr << "ERROR: unknown event!" << std::endl;
+      std::cerr << "ERROR: unknown event!\n";
       break;
     }
   }
 
   void invoke() {
-    auto startTime = std::chrono::high_resolution_clock::now();
-    auto &&response = m_client.getBalance(m_pubkey);
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto latency = std::chrono::duration_cast<std::chrono::microseconds>(
-        endTime - startTime).count();
+    int64_t latency = 0;
+    auto &&to_execute = [&]() {
+      auto startTime = std::chrono::high_resolution_clock::now();
+      auto &&response = m_client.getBalance(m_pubkey);
+      auto endTime = std::chrono::high_resolution_clock::now();
+      latency = std::chrono::duration_cast<std::chrono::milliseconds>(endTime -
+                                                                      startTime)
+                    .count();
+      return response;
+    };
+    
+    HTTPErrorHandler error_handler(5);
+    auto &&response = error_handler.invoke(to_execute);
 
-    // TODO: error handling and place result to the container
     if (cpr::status::is_success(response.status_code)) {
       char *ct;
       rapidjson::Document document;
@@ -67,7 +75,8 @@ public:
                   << std::endl;
       }
     } else {
-      std::cerr << "Invoke error: " << response.status_code << std::endl;
+      std::cerr << "Invoke error: " << response.status_code << ": "
+                << response.text << std::endl;
     }
   }
 };

@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <list>
 #include <mutex>
-#include <iostream>
 
 template <typename KeyTy, typename ValTy> class ConcurrentContainer final {
   std::list<std::pair<KeyTy, ValTy>> m_data;
@@ -23,7 +23,7 @@ template <typename KeyTy, typename ValTy> class ConcurrentContainer final {
   std::list<std::pair<KeyTy, ValTy>>::const_iterator m_window_left_it;
 
 public:
-  ConcurrentContainer(size_t window_width = 10)
+  ConcurrentContainer(size_t window_width = 2)
       : m_window_width(window_width), m_window_left_it(m_data.end()) {}
 
   template <typename KeyTy2, typename ValTy2>
@@ -43,8 +43,6 @@ public:
     }
     m_data.emplace(++posIt, std::forward<KeyTy2>(key),
                    std::forward<ValTy2>(val));
-
-    std::cout << m_window_elements << std::endl;
 
     if (insert_inside_window) {
       ++m_window_elements;
@@ -81,12 +79,11 @@ public:
 
 private:
   void shift_window() {
-    // TODO: determine was inserted element inside window or not?
     if (m_data.empty()) {
       return;
     }
-    // step to the last element
     if (m_window_left_it == m_data.end()) {
+      // step to the last element
       --m_window_left_it;
     }
 

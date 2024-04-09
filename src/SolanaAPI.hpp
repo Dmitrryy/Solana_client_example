@@ -20,7 +20,7 @@ public:
   SolanaRPCClient(std::string endpoint) {
     m_session.SetUrl(cpr::Url{endpoint});
     m_session.SetHeader(cpr::Header{{"Content-Type", "application/json"}});
-    m_session.SetTimeout(10000);
+    m_session.SetTimeout(20000);
 
     // init json template
     m_requestTmp.SetObject();
