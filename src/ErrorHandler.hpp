@@ -5,7 +5,6 @@
 #include <cpr/cpr.h>
 
 #include <chrono>
-#include <iostream>
 #include <thread>
 #include <utility>
 

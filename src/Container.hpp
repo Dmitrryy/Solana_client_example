@@ -1,13 +1,26 @@
 #pragma once
 
-#include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <list>
 #include <mutex>
 
+/// A container for storing the results in parallel, maintaining a key-sorted
+/// order. The container is designed with the expectation of temporary locality
+/// of incoming keys (in single-threaded execution, the key does not decrease,
+/// in multithreaded execution, the key position is of the order O(P), where P
+/// is the number of processes).
+///
+/// I stopped at this option because of the opportunity for improvement:
+/// Area for improvement: When inserting, it is not necessary to block the
+/// entire container, you need to block only the node where the insertion takes
+/// place. Reading from a sheet can be made non-blocking (on atomics).
+/// 
+/// Other interesting implementations:
+///    1. skip list - O(logN) insertion but without blocking entire container.
+///    2. Priority queue - O(logN) insertion
 template <typename KeyTy, typename ValTy> class ConcurrentContainer final {
-  std::list<std::pair<KeyTy, ValTy>> m_data;
+  using DataTy = std::tuple<KeyTy, size_t, ValTy>;
+  std::list<DataTy> m_data;
   mutable std::mutex m_access_mutex;
 
   // task 3
@@ -20,34 +33,33 @@ template <typename KeyTy, typename ValTy> class ConcurrentContainer final {
   size_t m_window_square_sum = 0;
   // T
   size_t m_window_width = 0;
-  std::list<std::pair<KeyTy, ValTy>>::const_iterator m_window_left_it;
+  // <key, latency, value>
+  std::list<DataTy>::const_iterator m_window_left_it;
 
 public:
   ConcurrentContainer(size_t window_width = 2)
       : m_window_width(window_width), m_window_left_it(m_data.end()) {}
 
   template <typename KeyTy2, typename ValTy2>
-  void emplace_back(KeyTy2 &&key, ValTy2 &&val) {
+  void emplace_back(KeyTy2 &&key, ValTy2 &&val, size_t latency) {
     std::lock_guard<std::mutex> lock(m_access_mutex);
     // find position by Key and insert
     auto &&posIt = m_data.end();
     bool insert_inside_window = true;
     while (posIt != m_data.begin()) {
       --posIt;
-      if (posIt->first <= key) {
+      if (std::get<0>(*posIt) <= key) {
         break;
       }
       if (posIt == m_window_left_it) {
         insert_inside_window = false;
       }
     }
-    m_data.emplace(++posIt, std::forward<KeyTy2>(key),
+    m_data.emplace(++posIt, std::forward<KeyTy2>(key), latency,
                    std::forward<ValTy2>(val));
 
     if (insert_inside_window) {
-      ++m_window_elements;
-      m_window_sum += val;
-      m_window_square_sum += val * val;
+      add_to_window(latency);
       shift_window();
     }
   }
@@ -57,9 +69,29 @@ public:
     return m_data.size();
   }
 
-  std::pair<KeyTy, ValTy> top() {
+  DataTy top_newer() {
     std::lock_guard<std::mutex> lock(m_access_mutex);
     return m_data.back();
+  }
+
+  DataTy top_older() {
+    std::lock_guard<std::mutex> lock(m_access_mutex);
+    return m_data.front();
+  }
+
+  bool pop_older(DataTy &Res) {
+    std::lock_guard<std::mutex> lock(m_access_mutex);
+    if (m_data.empty()) {
+      return false;
+    }
+    Res = m_data.front();
+
+    // we should delete element from window if necessary
+    if (m_window_left_it == m_data.begin()) {
+      auto cur_latency = m_window_left_it->second;
+      delete_from_window(cur_latency);
+      ++m_window_left_it;
+    }
   }
 
   // task 3
@@ -78,6 +110,18 @@ public:
   }
 
 private:
+  void add_to_window(size_t latency) {
+    ++m_window_elements;
+    m_window_sum += latency;
+    m_window_square_sum += latency * latency;
+  }
+
+  void delete_from_window(size_t latency) {
+    --m_window_elements;
+    m_window_sum -= latency;
+    m_window_square_sum -= latency * latency;
+  }
+
   void shift_window() {
     if (m_data.empty()) {
       return;
@@ -87,14 +131,13 @@ private:
       --m_window_left_it;
     }
 
-    const auto X = m_data.back().first;
+    const auto X = std::get<0>(m_data.back());
     const auto X_T = X - m_window_width;
 
-    while (m_window_left_it != m_data.end() && m_window_left_it->first < X_T) {
-      auto cur_latency = m_window_left_it->second;
-      --m_window_elements;
-      m_window_sum -= cur_latency;
-      m_window_square_sum -= cur_latency * cur_latency;
+    while (m_window_left_it != m_data.end() &&
+           std::get<0>(*m_window_left_it) < X_T) {
+      auto cur_latency = std::get<1>(*m_window_left_it);
+      delete_from_window(cur_latency);
 
       ++m_window_left_it;
     }

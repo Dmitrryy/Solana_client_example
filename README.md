@@ -1,4 +1,9 @@
-# Interview_Solana
+# Solana client example
+
+## Folder structure:
+
+* src - common sources of class implementation.
+* task1/task2_3 - contain task descriptions and corresponding main files.
 
 ## Build
 

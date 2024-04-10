@@ -7,6 +7,6 @@ add_executable(task2
     task2.cpp
 )
 
-target_link_libraries(task2 PUBLIC crypto ssl cpr::cpr)
+target_link_libraries(task2 PUBLIC crypto ssl cpr::cpr TBB::tbb)
 target_include_directories(task2 PUBLIC ${rapidjson_SOURCE_DIR}/include)
 target_include_directories(task2 PUBLIC ${curl_lib_SOURCE_DIR}/include)

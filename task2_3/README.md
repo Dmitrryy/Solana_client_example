@@ -11,7 +11,7 @@ Your objective is to implement a
 
 ## Solution
 
-General architecture: the main thread generates tasks, the rest of the threads solve them and put the results in a container.
+General architecture: the main thread generates tasks, thread pool solve them and put the results in a container.
 
 The idea of container sorting: the sorting key has locality in time, that is, the inserted element is most likely to be at the end of the container. Under this assumption, the insertion will take O(P), where P is the number of threads in the program.
 
